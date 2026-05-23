@@ -46,8 +46,8 @@ public class BSPBuilder
         SplitNode(node.leftChild);
         SplitNode(node.rightChild);
     }
-
-        public void GenerateRoomsAndCorridors(NodeBSP node)
+   
+    public void GenerateRoomsAndCorridors(NodeBSP node)
     {
         if (node.IsLeaf)
         {
@@ -75,28 +75,35 @@ public class BSPBuilder
         Vector2 leftCenter = node.leftChild.roomBounds.center;
         Vector2 rightCenter = node.rightChild.roomBounds.center;
 
-        int minX = (int)Mathf.Min(leftCenter.x, rightCenter.x);
-        int maxX = (int)Mathf.Max(leftCenter.x, rightCenter.x);
-        int minY = (int)Mathf.Min(leftCenter.y, rightCenter.y);
-        int maxY = (int)Mathf.Max(leftCenter.y, rightCenter.y);
+        int x1 = (int)leftCenter.x;
+        int y1 = (int)leftCenter.y;
+        int x2 = (int)rightCenter.x;
+        int y2 = (int)rightCenter.y;
 
         int corridorThickness = 2; // Grosor del pasillo
 
-        // Retornamos un RectInt que encapsula los centros de ambas habitaciones
-        // Para simplificar, en 2D el corredor se dibuja como una superposición de rectángulos
-        if (Mathf.Abs(leftCenter.x - rightCenter.x) > Mathf.Abs(leftCenter.y - rightCenter.y))
-        {
-            // Conexión Horizontal
-            node.Corridor = new RectInt(minX, minY, maxX - minX, corridorThickness);
-        }
-        else
-        {
-            // Conexión Vertical
-            node.Corridor = new RectInt(minX, minY, corridorThickness, maxY - minY);
-        }
+        // 1. Trazar Pasillo Horizontal (desde el Centro 1 hasta la X del Centro 2)
+        int minX = Mathf.Min(x1, x2);
+        int maxX = Mathf.Max(x1, x2);
+        node.Corridors.Add(new RectInt(minX, y1, (maxX - minX) + corridorThickness, corridorThickness));
 
-        // Para la recursión, el nodo padre hereda una aproximación del área conectada
-        return node.Corridor;
+        // 2. Trazar Pasillo Vertical (desde la Y del Centro 1 hasta el Centro 2)
+        int minY = Mathf.Min(y1, y2);
+        int maxY = Mathf.Max(y1, y2);
+        node.Corridors.Add(new RectInt(x2, minY, corridorThickness, (maxY - minY) + corridorThickness));
+
+        // Fix: Return a RectInt, not a List<RectInt>. 
+        // Here, return the bounding rectangle that contains all corridors.
+        int corridorXMin = Mathf.Min(node.Corridors[0].xMin, node.Corridors[1].xMin);
+        int corridorYMin = Mathf.Min(node.Corridors[0].yMin, node.Corridors[1].yMin);
+        int corridorXMax = Mathf.Max(node.Corridors[0].xMax, node.Corridors[1].xMax);
+        int corridorYMax = Mathf.Max(node.Corridors[0].yMax, node.Corridors[1].yMax);
+        return new RectInt(
+            corridorXMin,
+            corridorYMin,
+            corridorXMax - corridorXMin,
+            corridorYMax - corridorYMin
+        );
     }
 }
 

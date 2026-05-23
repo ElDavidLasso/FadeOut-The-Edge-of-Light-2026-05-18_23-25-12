@@ -7,7 +7,7 @@ public class NodeBSP
     public RectInt bounds; //Espacio total que ocupa este nodo
     public RectInt roomBounds; //Espacio real de la habitación,(siempre más pequeña o igual a Bounds)
     public NodeBSP leftChild, rightChild; //Hijos del árbol binario
-    public RectInt Corridor;// Pasillo que conecta a los hijos
+    public System.Collections.Generic.List<RectInt> Corridors { get; set; } = new System.Collections.Generic.List<RectInt>();
     public NodeBSP(RectInt bounds) { //Constructor
         this.bounds = bounds; 
     }
