@@ -2,11 +2,25 @@ using UnityEngine;
 
 public enum TileType { Empty, Floor }
 
+// 1. Creamos las etiquetas para los tipos de pivote
+public enum PivotLocation { Corner, CenterEdge }
+
+// 2. Creamos una estructura de datos serializable para el Inspector
+[System.Serializable]
+public struct WallData
+{
+    public GameObject prefab;
+    public PivotLocation pivotType;
+}
+
 public class BSPTranslator : MonoBehaviour
 {
-    [Header("Assets Modulares")]
-    [SerializeField] private GameObject floorPrefab;
-    [SerializeField] private GameObject wallPrefab;
+    [Header("Suelos Aleatorios")]
+    [SerializeField] private GameObject[] floorPrefabs;
+
+    [Header("Paredes Dinámicas (Soporte Multi-Pivote)")]
+    [Tooltip("Configura cada pared con su tipo de pivote correspondiente")]
+    [SerializeField] private WallData[] wallDataArray;
 
     [Header("Configuración")]
     [SerializeField] private Transform environmentParent;
@@ -18,6 +32,12 @@ public class BSPTranslator : MonoBehaviour
 
     public void TranslateTo3D(NodeBSP rootNode, int mapWidth, int mapHeight, Vector2Int playerSpawnGrid)
     {
+        if (floorPrefabs == null || floorPrefabs.Length == 0 || wallDataArray == null || wallDataArray.Length == 0)
+        {
+            Debug.LogError("Faltan prefabs en el Inspector.");
+            return;
+        }
+
         this.width = mapWidth;
         this.height = mapHeight;
 
@@ -81,9 +101,11 @@ public class BSPTranslator : MonoBehaviour
             {
                 if (mapGrid[x, y] == TileType.Floor)
                 {
-                    // El suelo se mantiene en su posición de grid estándar
+                    int randomFloorIndex = Random.Range(0, floorPrefabs.Length);
+                    Instantiate(floorPrefabs[randomFloorIndex], new Vector3(x * tileSize, 0, y * tileSize), Quaternion.identity, environmentParent);
+
+                    // La baldosa nace desde su esquina inferior izquierda
                     Vector3 floorPos = new Vector3(x * tileSize, 0, y * tileSize);
-                    Instantiate(floorPrefab, floorPos, Quaternion.identity, environmentParent);
 
                     foreach (Vector2Int dir in directions)
                     {
@@ -92,51 +114,52 @@ public class BSPTranslator : MonoBehaviour
 
                         if (nx < 0 || nx >= width || ny < 0 || ny >= height || mapGrid[nx, ny] == TileType.Empty)
                         {
+                            // --- SELECCIÓN DE PARED CON METADATOS ---
+                            int randomWallIndex = Random.Range(0, wallDataArray.Length);
+                            WallData selectedData = wallDataArray[randomWallIndex];
+
                             Vector3 wallPos = Vector3.zero;
                             float targetAngleY = 0f;
 
-                            // RECALIBRACIÓN GEOMÉTRICA DE ANCLAJES (SOLUCIÓN AL DESFASE EN Z)
-                            if (dir == Vector2Int.up) // Pared NORTE (Vacío arriba)
+                            // 1. EVALUACIÓN CONDICIONAL DE GEOMETRÍA
+                            if (selectedData.pivotType == PivotLocation.Corner)
                             {
-                                targetAngleY = 0f;
-                                // CORRECCIÓN: La pared norte debe anclarse en la base superior izquierda del suelo, 
-                                // pero sin empujarla un tile completo hacia adelante.
-                                wallPos = floorPos + new Vector3(0, 0, tileSize);
-                                wallPos.z -= tileSize;
+                                // Matemática para la Imagen 1 (Wall 1 - Esquina)
+                                if (dir == Vector2Int.up) { targetAngleY = 0f; wallPos = floorPos + new Vector3(0, 0, tileSize); }
+                                else if (dir == Vector2Int.right) { targetAngleY = 90f; wallPos = floorPos + new Vector3(tileSize, 0, tileSize); }
+                                else if (dir == Vector2Int.down) { targetAngleY = 180f; wallPos = floorPos + new Vector3(tileSize, 0, 0); }
+                                else if (dir == Vector2Int.left) { targetAngleY = -90f; wallPos = floorPos + new Vector3(0, 0, 0); }
+                                if (dir == Vector2Int.up || dir == Vector2Int.down)
+                                {
+                                    wallPos.z -= tileSize;
+                                }
+                                if (dir == Vector2Int.right || dir == Vector2Int.left)
+                                {
+                                    wallPos.z -= tileSize;
+                                }
                             }
-                            else if (dir == Vector2Int.down) // Pared SUR (Vacío abajo)
+                            else if (selectedData.pivotType == PivotLocation.CenterEdge)
                             {
-                                targetAngleY = 180f;
-                                // CORRECCIÓN: Para compensar el giro de 180° que empujaba la pared hacia atrás,
-                                // sumamos el tileSize en X y lo dejamos en 0 en Z para que se despliegue sobre el borde inferior.
-                                wallPos = floorPos + new Vector3(tileSize, 0, 0);
-                                wallPos.z -= tileSize;
-                            }
-                            else if (dir == Vector2Int.right) // Pared ESTE (Vacío a la derecha)
-                            {
-                                targetAngleY = 90f;
-                                wallPos = floorPos + new Vector3(tileSize, 0, tileSize);
-                                wallPos.z -= tileSize;
-                            }
-                            else if (dir == Vector2Int.left) // Pared OESTE (Vacío a la izquierda)
-                            {
-                                targetAngleY = -90f;
-                                wallPos = floorPos + new Vector3(0, 0, 0);
-                                wallPos.z -= tileSize;
-                            }
-
-                            // Si tras aplicar esto notas que el desfase persiste por la configuración interna del FBX,
-                            // la solución matemática estándar para prefabs con pivote invertido en Z es restar una unidad lineal:
-                            if (dir == Vector2Int.up || dir == Vector2Int.down)
-                            {
-                                // Descomenta la línea de abajo SOLO si el modelo sigue apareciendo un casillero adelantado
-                                //wallPos.z -= tileSize;  
+                                // Matemática para la Imagen 2 (Wall 2 - Centro del borde)
+                                if (dir == Vector2Int.up) { targetAngleY = 180f; wallPos = floorPos + new Vector3(0, 0, tileSize); }
+                                else if (dir == Vector2Int.right) { targetAngleY = -90f; wallPos = floorPos + new Vector3(tileSize, 0, tileSize); }
+                                else if (dir == Vector2Int.down) { targetAngleY = 0f; wallPos = floorPos + new Vector3(tileSize, 0, 0); }
+                                else if (dir == Vector2Int.left) { targetAngleY = 90f; wallPos = floorPos + new Vector3(0, 0, 0); }
+                                if (dir == Vector2Int.up || dir == Vector2Int.down)
+                                {                                    
+                                    wallPos.z -= tileSize;
+                                }
+                                if (dir == Vector2Int.right || dir == Vector2Int.left)
+                                {
+                                    wallPos.z -= tileSize;
+                                }
                             }
 
-                            Vector3 prefabEuler = wallPrefab.transform.eulerAngles;
+                            // 2. EXTRACCIÓN DE LA ROTACIÓN CRUDA (Respeta el FBX base)
+                            Vector3 prefabEuler = selectedData.prefab.transform.eulerAngles;
                             Quaternion wallRotation = Quaternion.Euler(prefabEuler.x, prefabEuler.y + targetAngleY, prefabEuler.z);
 
-                            Instantiate(wallPrefab, wallPos, wallRotation, environmentParent);
+                            Instantiate(selectedData.prefab, wallPos, wallRotation, environmentParent);
                         }
                     }
                 }
