@@ -7,11 +7,14 @@ public class BSPMapManager : MonoBehaviour
     [Header("Configuración BSP")]
     [SerializeField] private int mapWidth = 50;
     [SerializeField] private int mapHeight = 50;
+
+    // 1. AÑADIMOS LA VARIABLE FALTANTE AQUÍ (minNodeSize siempre debe ser mayor a minRoomSize)
+    [SerializeField] private int minNodeSize = 12;
     [SerializeField] private int minRoomSize = 6;
 
     [Header("Referencias")]
     [SerializeField] private BSPTranslator translator;
-    [SerializeField] private GameObject player; 
+    [SerializeField] private GameObject player;
 
     // El nodo raíz que contendrá a todo el árbol en memoria
     private NodeBSP rootNode;
@@ -27,14 +30,24 @@ public class BSPMapManager : MonoBehaviour
         // 1. Inicializar el espacio total (Sub-tarea 1.1)
         RectInt totalArea = new RectInt(0, 0, mapWidth, mapHeight);
         rootNode = new NodeBSP(totalArea);
-        // 2. Crear el constructor y ejecutar la división espacial (Sub-tarea 1.2)
-        BSPBuilder builder = new BSPBuilder(minRoomSize);
-        builder.SplitNode(rootNode);
-        // 3. Generar las habitaciones y trazar pasillos (Sub-tarea 1.3)
-        builder.GenerateRoomsAndCorridors(rootNode);
 
-        // 4. Traducción a 3D
-        translator.TranslateTo3D(rootNode);
+        // 2. LINEA 31 CORREGIDA: Ahora le pasamos ambos parámetros al constructor
+        BSPBuilder builder = new BSPBuilder(minNodeSize, minRoomSize);
+
+        builder.SplitNode(rootNode);
+
+        // 3. Generar las habitaciones y trazar pasillos (Sub-tarea 1.3)
+        builder.GenerateStructures(rootNode);
+
+        // Calcula el nodo hoja del spawn antes de traducir
+        NodeBSP firstLeaf = GetFirstLeaf(rootNode);
+        Vector2Int playerSpawnGrid = new Vector2Int(
+            firstLeaf.roomBounds.x + (firstLeaf.roomBounds.width / 2),
+            firstLeaf.roomBounds.y + (firstLeaf.roomBounds.height / 2)
+        );
+
+        // 4. Traducción a 3D enviando los datos de control de flujo
+        translator.TranslateTo3D(rootNode, mapWidth, mapHeight, playerSpawnGrid);
 
         // 5. Spawn del jugador
         SpawnPlayer(rootNode);
