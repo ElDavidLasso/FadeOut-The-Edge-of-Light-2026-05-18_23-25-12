@@ -75,7 +75,6 @@ public class BSPBuilder
 
     private void ConnectRooms(NodeBSP node)
     {
-        // Obtener los centros de los espacios jugables reales de los hijos
         Vector2 leftCenter = GetRoomCenter(node.leftChild);
         Vector2 rightCenter = GetRoomCenter(node.rightChild);
 
@@ -84,9 +83,15 @@ public class BSPBuilder
         int x2 = (int)rightCenter.x;
         int y2 = (int)rightCenter.y;
 
-        int thickness = 3; // Ancho del pasillo para asegurar la navegación de la IA
+        // 1. Calculamos la distancia total (Manhattan) entre los dos centros
+        int distanceX = Mathf.Abs(x1 - x2);
+        int distanceY = Mathf.Abs(y1 - y2);
+        int totalDistance = distanceX + distanceY;
 
-        // Crear la conexión en "L" (Tramo horizontal + Tramo vertical)
+        // 2. REGLA DEL LEAD: Si el pasillo supera los 4 cuadros de largo, el grosor se vuelve 1. 
+        // Si es igual o menor a 4 (cuartos pegados), el grosor se vuelve 3 (o el número que prefieras) para integrarse.
+        int thickness = (totalDistance > 4) ? 1 : 3;
+
         int minX = Mathf.Min(x1, x2);
         int maxX = Mathf.Max(x1, x2);
         node.Corridors.Add(new RectInt(minX, y1, (maxX - minX) + thickness, thickness));
