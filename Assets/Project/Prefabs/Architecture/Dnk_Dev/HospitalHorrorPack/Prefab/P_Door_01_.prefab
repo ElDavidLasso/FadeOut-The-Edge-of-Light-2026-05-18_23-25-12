@@ -9,7 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4856336461430574}
-  m_Layer: 0
+  - component: {fileID: 1725127094536517866}
+  m_Layer: 3
   m_Name: P_Door_01_
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -33,6 +34,21 @@ Transform:
   - {fileID: 4797957233283194}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1725127094536517866
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257244082436250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d29a4c09917d9764e89fad805d3d1fc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  openAngle: 90
+  smoothness: 5
+  localHingeOffset: {x: -0.6, y: 0, z: 0}
 --- !u!1 &1754945289371740
 GameObject:
   m_ObjectHideFlags: 0
@@ -45,7 +61,7 @@ GameObject:
   - component: {fileID: 33516057585736098}
   - component: {fileID: 23911412858261238}
   - component: {fileID: 64164028593076462}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Glass_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -92,9 +108,6 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -154,7 +167,7 @@ GameObject:
   - component: {fileID: 33897374521246260}
   - component: {fileID: 23861442377079082}
   - component: {fileID: 64662855721051718}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Door_01_C
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -201,9 +214,6 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
