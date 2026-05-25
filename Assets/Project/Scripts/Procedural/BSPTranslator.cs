@@ -3,7 +3,7 @@ using UnityEngine;
 public enum TileType { Empty, Floor }
 public enum PivotLocation { Corner, ReverseCorner }
 
-// NUEVO: Etiquetas de zona para que el algoritmo sea consciente del contexto
+// Etiquetas de zona para que el algoritmo sea consciente del contexto
 public enum ZoneType { None, Room, LongCorridor, ShortCorridor }
 
 [System.Serializable]
@@ -11,6 +11,13 @@ public struct WallData
 {
     public GameObject prefab;
     public PivotLocation pivotType;
+}
+[System.Serializable]
+public struct PropData
+{
+    public GameObject prefab;
+    public enum PlacementType { Floor, Ceiling }
+    public PlacementType placement;
 }
 
 public class BSPTranslator : MonoBehaviour
@@ -33,9 +40,14 @@ public class BSPTranslator : MonoBehaviour
     [SerializeField] private float tileSize = 3f;
     [SerializeField] private float ceilingHeight = 3f;
 
-    // Matriz de zonas: Sabe exactamente si estás parado en un cuarto, un pasillo largo o uno corto
+    [Header("Iluminación del Nivel")]
+    [Tooltip("El prefab de tu lámpara de techo")]
+    [SerializeField] private GameObject ceilingLampPrefab;
+
+    // Matriz de zonas
     private ZoneType[,] zoneGrid;
     private TileType[,] mapGrid;
+    private bool[,] occupiedGrid;
     private int width;
     private int height;
 
@@ -54,6 +66,7 @@ public class BSPTranslator : MonoBehaviour
 
         mapGrid = new TileType[width, height];
         zoneGrid = new ZoneType[width, height];
+        occupiedGrid = new bool[width, height];
 
         for (int x = 0; x < width; x++)
         {
@@ -61,12 +74,19 @@ public class BSPTranslator : MonoBehaviour
             {
                 mapGrid[x, y] = TileType.Empty;
                 zoneGrid[x, y] = ZoneType.None;
+                occupiedGrid[x, y] = false;
             }
         }
 
         ClearOldMap();
         CarveMapData(rootNode);
         BuildDungeon3D();
+
+        // 1. Capa de Iluminación Estructural
+        GenerateLighting(rootNode);
+
+        // 2. Capa de Utilería Aleatoria
+        ScatterProps(rootNode);
     }
 
     private void ClearOldMap()
@@ -94,7 +114,6 @@ public class BSPTranslator : MonoBehaviour
             {
                 foreach (RectInt corridor in node.Corridors)
                 {
-                    // Evaluamos matemáticamente qué tipo de pasillo nos dio el Builder
                     int length = Mathf.Max(corridor.width, corridor.height);
                     ZoneType type = (length > 4) ? ZoneType.LongCorridor : ZoneType.ShortCorridor;
                     CarveRectangle(corridor, type);
@@ -116,7 +135,6 @@ public class BSPTranslator : MonoBehaviour
             {
                 mapGrid[x, y] = TileType.Floor;
 
-                // PRIORIDAD ESTRUCTURAL: Un pasillo nunca debe borrar la etiqueta de una habitación
                 if (zoneGrid[x, y] != ZoneType.Room)
                 {
                     zoneGrid[x, y] = type;
@@ -147,20 +165,263 @@ public class BSPTranslator : MonoBehaviour
                         int nx = x + dir.x;
                         int ny = y + dir.y;
 
-                        // CASO A: FRONTERA AL VACÍO -> PARED CIEGA
                         if (nx < 0 || nx >= width || ny < 0 || ny >= height || mapGrid[nx, ny] == TileType.Empty)
                         {
                             SpawnWallElement(floorPos, dir);
                         }
-                        // CASO B: FRONTERA DE HABITACIÓN A PASILLO LARGO -> EXACTAMENTE 1 PUERTA
                         else if (zoneGrid[x, y] == ZoneType.Room && zoneGrid[nx, ny] == ZoneType.LongCorridor)
                         {
                             SpawnDoorElement(floorPos, dir);
                         }
-                        // Nota Técnica: Si toca un ShortCorridor, no entra a ningún if, dejando un arco abierto.
                     }
                 }
             }
+        }
+    }
+
+    [Header("Sistema de Props")]
+    [SerializeField] private PropData[] propDataArray;
+
+    [Range(0.01f, 0.5f)]
+    [SerializeField] private float propDensity = 0.1f;
+
+    private void ScatterProps(NodeBSP node)
+    {
+        if (node == null) return;
+
+        if (node.IsLeaf)
+        {
+            int roomArea = node.roomBounds.width * node.roomBounds.height;
+            int targetPropCount = Mathf.CeilToInt(roomArea * propDensity);
+
+            int spawnedProps = 0;
+            int safetyFallback = 0;
+
+            while (spawnedProps < targetPropCount && safetyFallback < roomArea * 2)
+            {
+                safetyFallback++;
+
+                int rx = Random.Range(node.roomBounds.x + 1, node.roomBounds.x + node.roomBounds.width - 1);
+                int ry = Random.Range(node.roomBounds.y + 1, node.roomBounds.y + node.roomBounds.height - 1);
+
+                if (rx >= 0 && rx < width && ry >= 0 && ry < height)
+                {
+                    if (mapGrid[rx, ry] == TileType.Floor &&
+                        zoneGrid[rx, ry] == ZoneType.Room &&
+                        !occupiedGrid[rx, ry])
+                    {
+                        occupiedGrid[rx, ry] = true;
+
+                        PlaceRandomProp(new Vector3(rx * tileSize, 0, ry * tileSize));
+                        spawnedProps++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            ScatterProps(node.leftChild);
+            ScatterProps(node.rightChild);
+        }
+    }
+
+    private void PlaceRandomProp(Vector3 position)
+    {
+        PropData data = propDataArray[Random.Range(0, propDataArray.Length)];
+
+        float yOffset = (data.placement == PropData.PlacementType.Floor) ? 0 : ceilingHeight;
+        Vector3 finalPos = new Vector3(
+        position.x + (tileSize / 2f),
+        yOffset,
+        (position.z + (tileSize / 2f)) - tileSize // <--- EL AJUSTE AQUÍ
+        );
+
+        float[] angles = { 0f, 90f, 180f, -90f };
+        float randomAngle = angles[Random.Range(0, angles.Length)];
+
+        Vector3 prefabEuler = data.prefab.transform.eulerAngles;
+        Quaternion propRotation = Quaternion.Euler(prefabEuler.x, prefabEuler.y + randomAngle, prefabEuler.z);
+
+        Instantiate(data.prefab, finalPos, propRotation, environmentParent);
+    }
+
+    private void GenerateLighting(NodeBSP rootNode)
+    {
+        if (ceilingLampPrefab == null) return;
+
+        bool[,] lampGrid = new bool[width, height];
+
+        GenerateRoomLighting(rootNode, ref lampGrid);
+        GenerateVisualCorridorLighting();
+    }
+
+    private void GenerateVisualCorridorLighting()
+    {
+        bool[,] processedCorridors = new bool[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (IsCorridor(x, y) && !processedCorridors[x, y])
+                {
+                    bool isHorizontal = false;
+                    if ((x > 0 && IsCorridor(x - 1, y)) || (x < width - 1 && IsCorridor(x + 1, y)))
+                    {
+                        isHorizontal = true;
+                    }
+
+                    System.Collections.Generic.List<Vector2Int> corridorLine = new System.Collections.Generic.List<Vector2Int>();
+
+                    if (isHorizontal)
+                    {
+                        int cx = x;
+                        while (cx >= 0 && IsCorridor(cx, y) && !processedCorridors[cx, y])
+                        {
+                            corridorLine.Add(new Vector2Int(cx, y));
+                            processedCorridors[cx, y] = true;
+                            cx--;
+                        }
+                        cx = x + 1;
+                        while (cx < width && IsCorridor(cx, y) && !processedCorridors[cx, y])
+                        {
+                            corridorLine.Add(new Vector2Int(cx, y));
+                            processedCorridors[cx, y] = true;
+                            cx++;
+                        }
+                    }
+                    else
+                    {
+                        int cy = y;
+                        while (cy >= 0 && IsCorridor(x, cy) && !processedCorridors[x, cy])
+                        {
+                            corridorLine.Add(new Vector2Int(x, cy));
+                            processedCorridors[x, cy] = true;
+                            cy--;
+                        }
+                        cy = y + 1;
+                        while (cy < height && IsCorridor(x, cy) && !processedCorridors[x, cy])
+                        {
+                            corridorLine.Add(new Vector2Int(x, cy));
+                            processedCorridors[x, cy] = true;
+                            cy++;
+                        }
+                    }
+
+                    if (corridorLine.Count > 0)
+                    {
+                        float sumX = 0;
+                        float sumY = 0;
+
+                        foreach (Vector2Int tile in corridorLine)
+                        {
+                            sumX += tile.x;
+                            sumY += tile.y;
+                        }
+
+                        float centerX = sumX / corridorLine.Count;
+                        float centerY = sumY / corridorLine.Count;
+
+                        Vector3 exactCenter = new Vector3(
+                        centerX * tileSize + (tileSize / 2f),
+                        ceilingHeight,
+                        (centerY * tileSize + (tileSize / 2f)) - tileSize // <--- EL AJUSTE AQUÍ
+                        );
+
+                        // NOTA: Si ves que la lámpara del pasillo queda "cruzada" (perpendicular al muro),
+                        // simplemente intercambia los valores 90f y 0f aquí.
+                        float angleOffset = isHorizontal ? 90f : 0f;
+
+                        Vector3 prefabEuler = ceilingLampPrefab.transform.eulerAngles;
+                        Quaternion lampRot = Quaternion.Euler(prefabEuler.x, prefabEuler.y + angleOffset, prefabEuler.z);
+
+                        GameObject spawnedLamp = Instantiate(ceilingLampPrefab, exactCenter, lampRot, environmentParent);
+
+                        // --- MAGIA DEL LEAD: IGNORAR EL PIVOTE DEL ARTISTA 3D ---
+                        ForceMeshCenterToPosition(spawnedLamp, exactCenter);
+                    }
+                }
+            }
+        }
+    }
+
+    // MÉTODO DE SEGURIDAD ABSOLUTA
+    private void ForceMeshCenterToPosition(GameObject obj, Vector3 targetPosition)
+    {
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return;
+
+        // Combinamos todas las mallas en una gran caja (Bounding Box)
+        Bounds totalBounds = renderers[0].bounds;
+        foreach (Renderer r in renderers)
+        {
+            totalBounds.Encapsulate(r.bounds);
+        }
+
+        // Calculamos cuánto desfasó el artista el pivote de su centro real
+        Vector3 pivotOffset = targetPosition - totalBounds.center;
+
+        // Bloqueamos la corrección en Y para que la lámpara no se "hunda" en el techo
+        pivotOffset.y = 0f;
+
+        // Aplicamos el empuje inverso
+        obj.transform.position += pivotOffset;
+    }
+
+    private bool IsCorridor(int x, int y)
+    {
+        return zoneGrid[x, y] == ZoneType.LongCorridor || zoneGrid[x, y] == ZoneType.ShortCorridor;
+    }
+
+    private void GenerateRoomLighting(NodeBSP node, ref bool[,] lampGrid)
+    {
+        if (node == null) return;
+
+        if (node.IsLeaf)
+        {
+            int rx = Mathf.Max(0, node.roomBounds.x);
+            int ry = Mathf.Max(0, node.roomBounds.y);
+            int rw = Mathf.Min(node.roomBounds.width, width - rx);
+            int rh = Mathf.Min(node.roomBounds.height, height - ry);
+
+            if (rw <= 0 || rh <= 0) return;
+
+            int spacing = 4;
+
+            int countX = Mathf.Max(1, rw / spacing);
+            int countY = Mathf.Max(1, rh / spacing);
+
+            float stepX = (float)rw / countX;
+            float stepY = (float)rh / countY;
+
+            for (int i = 0; i < countX; i++)
+            {
+                for (int j = 0; j < countY; j++)
+                {
+                    float localX = (i * stepX) + (stepX / 2f);
+                    float localY = (j * stepY) + (stepY / 2f);
+
+                    float globalX = rx + localX;
+                    float globalY = ry + localY;
+
+                    // El cálculo simétrico sincronizado con tu geometría visual
+                    Vector3 lampPos = new Vector3(
+                        globalX * tileSize,
+                        ceilingHeight,
+                        (globalY * tileSize) - tileSize // <--- EL AJUSTE AQUÍ
+                    );
+                    Instantiate(ceilingLampPrefab, lampPos, ceilingLampPrefab.transform.rotation, environmentParent);
+
+                    int tileX = Mathf.Clamp(Mathf.FloorToInt(globalX), 0, width - 1);
+                    int tileY = Mathf.Clamp(Mathf.FloorToInt(globalY), 0, height - 1);
+                    lampGrid[tileX, tileY] = true;
+                }
+            }
+        }
+        else
+        {
+            GenerateRoomLighting(node.leftChild, ref lampGrid);
+            GenerateRoomLighting(node.rightChild, ref lampGrid);
         }
     }
 
@@ -189,16 +450,18 @@ public class BSPTranslator : MonoBehaviour
     private Vector3 CalculateObjectPosition(Vector3 floorPos, Vector2Int dir, PivotLocation pivot)
     {
         Vector3 pos = Vector3.zero;
+
         if (pivot == PivotLocation.Corner || pivot == PivotLocation.ReverseCorner)
         {
+            // Las posiciones nacen perfectamente ancladas a las 4 esquinas del suelo
             if (dir == Vector2Int.up) pos = floorPos + new Vector3(0, 0, tileSize);
             else if (dir == Vector2Int.right) pos = floorPos + new Vector3(tileSize, 0, tileSize);
             else if (dir == Vector2Int.down) pos = floorPos + new Vector3(tileSize, 0, 0);
             else if (dir == Vector2Int.left) pos = floorPos + new Vector3(0, 0, 0);
-
             if (dir == Vector2Int.up || dir == Vector2Int.down) pos.z -= tileSize;
             if (dir == Vector2Int.right || dir == Vector2Int.left) pos.z -= tileSize;
         }
+
         return pos;
     }
 
