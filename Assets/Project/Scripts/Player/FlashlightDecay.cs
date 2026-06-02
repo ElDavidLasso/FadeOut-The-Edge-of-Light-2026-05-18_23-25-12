@@ -5,21 +5,21 @@ public class FlashlightDecay : MonoBehaviour
 {
     [Header("Ajustes de Batería (Decaimiento Exponencial)")]
     [SerializeField] private float maxIntensity = 10f;
-    [SerializeField] private float decayRate = 0.02f; // El valor Lambda
+    [SerializeField] private float decayRate = 0.02f; 
     [SerializeField] private bool isFlashlightOn = true;
 
     [Header("Efecto de Pánico (Parpadeo)")]
-    [SerializeField] private float flickerThreshold = 2.5f; // Cuando la luz baja de esto, empieza a fallar
+    [SerializeField] private float flickerThreshold = 2.5f; 
 
     private Light flashlight;
     private float timeActive = 0f;
 
-    // --- PROPIEDADES PÚBLICAS PARA LA IA (LEAD DATA) ---
+    
     public bool IsFlashlightOn => isFlashlightOn && flashlight != null && flashlight.enabled;
     public float CurrentRange => flashlight != null ? flashlight.range : 0f;
     public float SpotlightAngle => flashlight != null ? flashlight.spotAngle : 0f;
 
-    // Indica si la luz es fuerte. Si entra en Falloff/Parpadeo, devuelve FALSE
+    
     public bool IsLightEffective => IsFlashlightOn && flashlight.intensity >= flickerThreshold;
 
     private void Awake()

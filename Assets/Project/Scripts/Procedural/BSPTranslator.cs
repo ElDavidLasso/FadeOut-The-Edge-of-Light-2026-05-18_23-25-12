@@ -3,7 +3,6 @@ using UnityEngine;
 public enum TileType { Empty, Floor }
 public enum PivotLocation { Corner, ReverseCorner }
 
-// Etiquetas de zona para que el algoritmo sea consciente del contexto
 public enum ZoneType { None, Room, LongCorridor, ShortCorridor }
 
 [System.Serializable]
@@ -41,10 +40,10 @@ public class BSPTranslator : MonoBehaviour
     [SerializeField] private float ceilingHeight = 3f;
 
     [Header("Iluminación del Nivel")]
-    [Tooltip("El prefab de tu lámpara de techo")]
+    [Tooltip("El prefab de la lámpara de techo")]
     [SerializeField] private GameObject ceilingLampPrefab;
 
-    // Matriz de zonas
+    
     private ZoneType[,] zoneGrid;
     private TileType[,] mapGrid;
     private bool[,] occupiedGrid;
@@ -82,10 +81,10 @@ public class BSPTranslator : MonoBehaviour
         CarveMapData(rootNode);
         BuildDungeon3D();
 
-        // 1. Capa de Iluminación Estructural
+        
         GenerateLighting(rootNode);
 
-        // 2. Capa de Utilería Aleatoria
+        
         ScatterProps(rootNode);
     }
 
@@ -233,8 +232,7 @@ public class BSPTranslator : MonoBehaviour
         Vector3 finalPos = new Vector3(
         position.x + (tileSize / 2f),
         yOffset,
-        (position.z + (tileSize / 2f)) - tileSize // <--- EL AJUSTE AQUÍ
-        );
+        (position.z + (tileSize / 2f)) - tileSize);
 
         float[] angles = { 0f, 90f, 180f, -90f };
         float randomAngle = angles[Random.Range(0, angles.Length)];
@@ -325,11 +323,9 @@ public class BSPTranslator : MonoBehaviour
                         Vector3 exactCenter = new Vector3(
                         centerX * tileSize + (tileSize / 2f),
                         ceilingHeight,
-                        (centerY * tileSize + (tileSize / 2f)) - tileSize // <--- EL AJUSTE AQUÍ
-                        );
+                        (centerY * tileSize + (tileSize / 2f)) - tileSize);
 
-                        // NOTA: Si ves que la lámpara del pasillo queda "cruzada" (perpendicular al muro),
-                        // simplemente intercambia los valores 90f y 0f aquí.
+                        
                         float angleOffset = isHorizontal ? 90f : 0f;
 
                         Vector3 prefabEuler = ceilingLampPrefab.transform.eulerAngles;
@@ -337,7 +333,7 @@ public class BSPTranslator : MonoBehaviour
 
                         GameObject spawnedLamp = Instantiate(ceilingLampPrefab, exactCenter, lampRot, environmentParent);
 
-                        // --- MAGIA DEL LEAD: IGNORAR EL PIVOTE DEL ARTISTA 3D ---
+                       
                         ForceMeshCenterToPosition(spawnedLamp, exactCenter);
                     }
                 }
@@ -345,7 +341,6 @@ public class BSPTranslator : MonoBehaviour
         }
     }
 
-    // MÉTODO DE SEGURIDAD ABSOLUTA
     private void ForceMeshCenterToPosition(GameObject obj, Vector3 targetPosition)
     {
         Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
@@ -404,12 +399,11 @@ public class BSPTranslator : MonoBehaviour
                     float globalX = rx + localX;
                     float globalY = ry + localY;
 
-                    // El cálculo simétrico sincronizado con tu geometría visual
+                   
                     Vector3 lampPos = new Vector3(
                         globalX * tileSize,
                         ceilingHeight,
-                        (globalY * tileSize) - tileSize // <--- EL AJUSTE AQUÍ
-                    );
+                        (globalY * tileSize) - tileSize);
                     Instantiate(ceilingLampPrefab, lampPos, ceilingLampPrefab.transform.rotation, environmentParent);
 
                     int tileX = Mathf.Clamp(Mathf.FloorToInt(globalX), 0, width - 1);
@@ -453,7 +447,6 @@ public class BSPTranslator : MonoBehaviour
 
         if (pivot == PivotLocation.Corner || pivot == PivotLocation.ReverseCorner)
         {
-            // Las posiciones nacen perfectamente ancladas a las 4 esquinas del suelo
             if (dir == Vector2Int.up) pos = floorPos + new Vector3(0, 0, tileSize);
             else if (dir == Vector2Int.right) pos = floorPos + new Vector3(tileSize, 0, tileSize);
             else if (dir == Vector2Int.down) pos = floorPos + new Vector3(tileSize, 0, 0);

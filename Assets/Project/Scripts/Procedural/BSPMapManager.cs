@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-// 1. IMPORTANTE: Añadir el nuevo espacio de nombres de Unity AI
+
 using Unity.AI.Navigation;
 
 public class BSPMapManager : MonoBehaviour
@@ -16,7 +16,7 @@ public class BSPMapManager : MonoBehaviour
     [SerializeField] private BSPTranslator translator;
     [SerializeField] private GameObject player;
 
-    // 2. NUEVA REFERENCIA: El componente que escaneará el mapa
+    
     [SerializeField] private NavMeshSurface navMeshSurface;
 
     private NodeBSP rootNode;
@@ -43,13 +43,13 @@ public class BSPMapManager : MonoBehaviour
             firstLeaf.roomBounds.y + (firstLeaf.roomBounds.height / 2)
         );
 
-        // Traducción completa a 3D (Construye suelos, paredes, techos, puertas, luces y props)
+        
         translator.TranslateTo3D(rootNode, mapWidth, mapHeight, playerSpawnGrid);
 
-        // --- SUB-TAREA 5.2: EL DISPARADOR EN RUNTIME ---
+        
         if (navMeshSurface != null)
         {
-            // Ordena a Unity escanear la geometría recién creada en milisegundos
+            
             navMeshSurface.BuildNavMesh();
             Debug.Log("¡NavMesh bakeado con éxito en Runtime!");
         }
@@ -58,7 +58,7 @@ public class BSPMapManager : MonoBehaviour
             Debug.LogWarning("Falta asignar el NavMeshSurface en el BSPMapManager.");
         }
 
-        // Spawn del jugador (Se ejecuta después para asegurar que caiga en suelo firme mapeado)
+        
         SpawnPlayer(rootNode);
 
         Debug.Log("¡Estructura de datos BSP generada con éxito en memoria!");
@@ -72,7 +72,7 @@ public class BSPMapManager : MonoBehaviour
             float spawnX = firstLeaf.roomBounds.x + (firstLeaf.roomBounds.width / 2f);
             float spawnZ = firstLeaf.roomBounds.y + (firstLeaf.roomBounds.height / 2f);
 
-            // Ajustamos el spawn con tu regla imborrable del desfasaje (-3 metros en Z)
+           
             Vector3 spawnPosition = new Vector3(spawnX * 3f, 1.5f, (spawnZ * 3f) - 3f);
 
             CharacterController cc = player.GetComponent<CharacterController>();

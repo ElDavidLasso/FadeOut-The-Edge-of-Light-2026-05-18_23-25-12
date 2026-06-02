@@ -13,7 +13,7 @@ public class PlayerInteraction : MonoBehaviour
 
     private void Start()
     {
-        // Buscamos automáticamente la cámara principal en los objetos hijos
+        
         Camera mainCam = GetComponentInChildren<Camera>();
         if (mainCam != null)
         {
@@ -27,7 +27,7 @@ public class PlayerInteraction : MonoBehaviour
 
     private void Update()
     {
-        // Escuchamos la tecla de acción de forma global
+        
         if (Input.GetKeyDown(KeyCode.E))
         {
             TryInteract();
@@ -38,14 +38,14 @@ public class PlayerInteraction : MonoBehaviour
     {
         if (cameraTransform == null) return;
 
-        // Creamos un rayo físico desde el centro óptico de la cámara hacia adelante
+        
         Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
         RaycastHit hit;
 
-        // Ejecutamos el Raycast optimizado por máscara de capa (LayerMask)
+        
         if (Physics.Raycast(ray, out hit, interactionDistance, interactableLayer))
         {
-            // Buscamos el componente en el objeto golpeado o en sus padres directos
+            
             InteractiveDoor door = hit.collider.GetComponentInParent<InteractiveDoor>() ?? hit.collider.GetComponent<InteractiveDoor>();
 
             if (door != null)

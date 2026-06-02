@@ -110,7 +110,7 @@ public class EnemyAI : MonoBehaviour
         if (distanceToPlayer <= attackDistance)
         {
             currentState = EnemyState.Attacking;
-            agent.isStopped = true; // Frenamos en seco al enemigo
+            agent.isStopped = true; 
             agent.velocity = Vector3.zero;
 
             
@@ -137,14 +137,17 @@ public class EnemyAI : MonoBehaviour
 
     private void TriggerGameOver()
     {
-        isDead = true; 
+        isDead = true;
         Debug.LogWarning("¡EL ENEMIGO TE HA ATRAPADO! GAME OVER.");
 
-        // Aquí conectaremos tu script de Telemetría y la pantalla negra de Game Over
-        // TelemetryManager.Instance.SaveDataOnDeath();
+        FirstPersonHorror playerScript = player.GetComponent<FirstPersonHorror>();
+        if (playerScript != null)
+        {
+            playerScript.TriggerDeath();
+        }
     }
 
-    
+
     private void StartFleeing()
     {
         currentState = EnemyState.Fleeing;

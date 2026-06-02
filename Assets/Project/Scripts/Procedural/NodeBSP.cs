@@ -3,13 +3,13 @@ using UnityEngine;
 
 public class NodeBSP
 {
-    public RectInt bounds;       // El contenedor exterior (Sub-tarea 1.2)
-    public RectInt roomBounds;   // El espacio jugable real (Sub-tarea 1.3)
+    public RectInt bounds;       
+    public RectInt roomBounds;   
 
     public NodeBSP leftChild;
     public NodeBSP rightChild;
 
-    // Lista para soportar los tramos de pasillos en forma de "L"
+    
     public List<RectInt> Corridors { get; set; } = new List<RectInt>();
 
     public NodeBSP(RectInt bounds)

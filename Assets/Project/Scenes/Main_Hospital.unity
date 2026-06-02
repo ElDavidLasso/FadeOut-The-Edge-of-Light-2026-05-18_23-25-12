@@ -403,28 +403,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2049948274 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4978866410325973474, guid: fc473f93608795e43ab2f0d3f2bda266,
-    type: 3}
-  m_PrefabInstance: {fileID: 2060289229}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2049948275
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2049948274}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f39608282b246b247bdf8c85477fc0a1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  interactionDistance: 3
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 8
 --- !u!1001 &2060289229
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -488,29 +466,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 4978866410325973474, guid: fc473f93608795e43ab2f0d3f2bda266,
-        type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4978866410325973474, guid: fc473f93608795e43ab2f0d3f2bda266,
-        type: 3}
-      propertyPath: m_TagString
-      value: Player
-      objectReference: {fileID: 0}
-    - target: {fileID: 6539625636942913525, guid: fc473f93608795e43ab2f0d3f2bda266,
-        type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -1.32
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4978866410325973474, guid: fc473f93608795e43ab2f0d3f2bda266,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2049948275}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fc473f93608795e43ab2f0d3f2bda266, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
