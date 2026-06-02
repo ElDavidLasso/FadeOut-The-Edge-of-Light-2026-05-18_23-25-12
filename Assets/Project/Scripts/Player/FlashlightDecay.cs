@@ -14,6 +14,14 @@ public class FlashlightDecay : MonoBehaviour
     private Light flashlight;
     private float timeActive = 0f;
 
+    // --- PROPIEDADES PÚBLICAS PARA LA IA (LEAD DATA) ---
+    public bool IsFlashlightOn => isFlashlightOn && flashlight != null && flashlight.enabled;
+    public float CurrentRange => flashlight != null ? flashlight.range : 0f;
+    public float SpotlightAngle => flashlight != null ? flashlight.spotAngle : 0f;
+
+    // Indica si la luz es fuerte. Si entra en Falloff/Parpadeo, devuelve FALSE
+    public bool IsLightEffective => IsFlashlightOn && flashlight.intensity >= flickerThreshold;
+
     private void Awake()
     {
         flashlight = GetComponent<Light>();
@@ -46,23 +54,18 @@ public class FlashlightDecay : MonoBehaviour
 
     private void CalculateMathematicalFalloff()
     {
-        // I(t) = I_0 * e^(-k * t)
         float currentIntensity = maxIntensity * Mathf.Exp(-decayRate * timeActive);
 
-        // Lógica de parpadeo de terror cuando la batería está crítica
         if (currentIntensity < flickerThreshold)
         {
-            // Usamos Mathf.PerlinNoise para generar un parpadeo orgánico e impredecible, no un On/Off robótico
             float noise = Mathf.PerlinNoise(Time.time * 15f, 0f);
 
-            // Si el ruido es muy bajo, simulamos un "apagón" momentáneo
             if (noise < 0.2f)
                 currentIntensity = 0f;
             else
                 currentIntensity = Mathf.Lerp(0.1f, currentIntensity, noise);
         }
 
-        // Si la batería se agotó por completo
         if (currentIntensity < 0.05f && timeActive > 10f)
             currentIntensity = 0f;
 

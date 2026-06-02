@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 493860}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: P_Wall_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -45,7 +45,7 @@ GameObject:
   - component: {fileID: 33319968708103316}
   - component: {fileID: 23364929615377690}
   - component: {fileID: 64165276453591286}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Wall_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -151,7 +151,7 @@ GameObject:
   - component: {fileID: 33505639532492946}
   - component: {fileID: 23410520315410888}
   - component: {fileID: 64176364834421666}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Object001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
