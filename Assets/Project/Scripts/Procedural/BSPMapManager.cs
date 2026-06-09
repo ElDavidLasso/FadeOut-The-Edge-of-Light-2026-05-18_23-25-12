@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
 using Unity.AI.Navigation;
 
 public class BSPMapManager : MonoBehaviour
@@ -15,11 +14,13 @@ public class BSPMapManager : MonoBehaviour
     [Header("Referencias de Sistemas")]
     [SerializeField] private BSPTranslator translator;
     [SerializeField] private GameObject player;
-
-    
     [SerializeField] private NavMeshSurface navMeshSurface;
 
+    [Header("Sistema del Director (IA)")]
+    [SerializeField] private GameObject enemy;
+
     private NodeBSP rootNode;
+    private List<RectInt> allRooms = new List<RectInt>(); // Lista maestra de habitaciones
 
     private void Start()
     {
@@ -36,20 +37,22 @@ public class BSPMapManager : MonoBehaviour
         builder.SplitNode(rootNode);
         builder.GenerateStructures(rootNode);
 
-        // Calcula el nodo hoja del spawn antes de traducir
-        NodeBSP firstLeaf = GetFirstLeaf(rootNode);
+        
+        allRooms.Clear();
+        CollectAllRooms(rootNode);
+
+        RectInt firstRoom = allRooms[0];
         Vector2Int playerSpawnGrid = new Vector2Int(
-            firstLeaf.roomBounds.x + (firstLeaf.roomBounds.width / 2),
-            firstLeaf.roomBounds.y + (firstLeaf.roomBounds.height / 2)
+            firstRoom.x + (firstRoom.width / 2),
+            firstRoom.y + (firstRoom.height / 2)
         );
 
-        
+
         translator.TranslateTo3D(rootNode, mapWidth, mapHeight, playerSpawnGrid);
 
-        
+
         if (navMeshSurface != null)
         {
-            
             navMeshSurface.BuildNavMesh();
             Debug.Log("¡NavMesh bakeado con éxito en Runtime!");
         }
@@ -58,37 +61,74 @@ public class BSPMapManager : MonoBehaviour
             Debug.LogWarning("Falta asignar el NavMeshSurface en el BSPMapManager.");
         }
 
-        
-        SpawnPlayer(rootNode);
+
+        SpawnEntities(rootNode);
 
         Debug.Log("¡Estructura de datos BSP generada con éxito en memoria!");
     }
 
-    private void SpawnPlayer(NodeBSP node)
+
+
+    private void CollectAllRooms(NodeBSP node)
     {
-        NodeBSP firstLeaf = GetFirstLeaf(node);
-        if (firstLeaf != null)
+        if (node == null) return;
+        if (node.IsLeaf)
         {
-            float spawnX = firstLeaf.roomBounds.x + (firstLeaf.roomBounds.width / 2f);
-            float spawnZ = firstLeaf.roomBounds.y + (firstLeaf.roomBounds.height / 2f);
-
-           
-            Vector3 spawnPosition = new Vector3(spawnX * 3f, 1.5f, (spawnZ * 3f) - 3f);
-
-            CharacterController cc = player.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
-
-            player.transform.position = spawnPosition;
-
-            if (cc != null) cc.enabled = true;
+            allRooms.Add(node.roomBounds);
+        }
+        else
+        {
+            CollectAllRooms(node.leftChild);
+            CollectAllRooms(node.rightChild);
         }
     }
 
-    private NodeBSP GetFirstLeaf(NodeBSP node)
+    private void SpawnEntities(NodeBSP root)
     {
-        if (node.IsLeaf) return node;
-        if (node.leftChild != null) return GetFirstLeaf(node.leftChild);
-        if (node.rightChild != null) return GetFirstLeaf(node.rightChild);
-        return null;
+        if (allRooms.Count < 2)
+        {
+            Debug.LogWarning("El BSP generó menos de 2 cuartos. El enemigo y el jugador podrían aparecer juntos.");
+            return;
+        }
+
+
+        RectInt playerRoom = allRooms[0];
+        Vector3 playerPos = new Vector3((playerRoom.x + playerRoom.width / 2f) * 3f, 1.5f, (playerRoom.y + playerRoom.height / 2f) * 3f);
+
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
+        player.transform.position = playerPos;
+
+        if (cc != null) cc.enabled = true;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RegisterSafeSpawn(playerPos);
+        }
+
+        Debug.Log($"Jugador instanciado en el Cuarto 0: {playerPos}");
+
+        if (enemy != null)
+        {
+            RectInt enemyRoom = allRooms[allRooms.Count - 1];
+            Vector3 enemyPos = new Vector3((enemyRoom.x + enemyRoom.width / 2f) * 3f, 1.5f, (enemyRoom.y + enemyRoom.height / 2f) * 3f);
+
+
+            UnityEngine.AI.NavMeshAgent agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null) agent.enabled = false;
+
+            enemy.transform.position = enemyPos;
+
+            if (agent != null) agent.enabled = true;
+
+            EnemyTeleportDirector tpSystem = enemy.GetComponent<EnemyTeleportDirector>();
+            if (tpSystem != null)
+            {
+                tpSystem.Initialize(allRooms, player.transform, 3f);
+            }
+
+            Debug.Log($"Enemigo instanciado en el Cuarto {allRooms.Count - 1}: {enemyPos}");
+        }
     }
 }

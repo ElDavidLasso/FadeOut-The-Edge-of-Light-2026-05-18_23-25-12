@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent))]
+[RequireComponent(typeof(EnemyTeleportDirector))] // Asegura que el director esté en el mismo GameObject
 public class EnemyAI : MonoBehaviour
 {
     public enum EnemyState { Patrolling, Chasing, Fleeing, WaitingAfterFlee, Attacking }
@@ -19,7 +21,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Combate y Animación")]
     [Tooltip("Distancia a la que el enemigo te atrapa y mata")]
     [SerializeField] private float attackDistance = 1.5f;
-    [SerializeField] private Animator animator; 
+    [SerializeField] private Animator animator;
 
     [Header("Filtros de Capas (Física)")]
     [SerializeField] private LayerMask obstacleLayer;
@@ -28,12 +30,19 @@ public class EnemyAI : MonoBehaviour
     private Transform player;
     private FlashlightDecay playerFlashlight;
 
+    
+    private EnemyTeleportDirector director;
+
     private Vector3 patrolTarget;
     private float waitTimer = 0f;
-    private bool isDead = false; 
+    private bool isDead = false;
+
     private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        
+        director = GetComponent<EnemyTeleportDirector>();
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
@@ -42,7 +51,6 @@ public class EnemyAI : MonoBehaviour
             playerFlashlight = playerObj.GetComponentInChildren<FlashlightDecay>();
         }
 
-        
         if (animator == null) animator = GetComponentInChildren<Animator>();
 
         SetNewPatrolPoint();
@@ -57,7 +65,6 @@ public class EnemyAI : MonoBehaviour
             animator.SetFloat("Speed", agent.velocity.magnitude);
         }
 
-        
         if (IsHitByFlashlight() && currentState != EnemyState.Attacking)
         {
             if (currentState != EnemyState.Fleeing)
@@ -66,7 +73,6 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        
         switch (currentState)
         {
             case EnemyState.Patrolling:
@@ -81,6 +87,18 @@ public class EnemyAI : MonoBehaviour
             case EnemyState.WaitingAfterFlee:
                 ExecuteWaitingAfterFlee();
                 break;
+        }
+
+        if (director != null)
+        {
+            bool chasing = (currentState == EnemyState.Chasing);
+            director.isChasing = chasing;
+
+            
+            if (TelemetryManager.Instance != null)
+            {
+                TelemetryManager.Instance.SetChaseState(chasing);
+            }
         }
     }
 
@@ -106,19 +124,16 @@ public class EnemyAI : MonoBehaviour
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        
         if (distanceToPlayer <= attackDistance)
         {
             currentState = EnemyState.Attacking;
-            agent.isStopped = true; 
+            agent.isStopped = true;
             agent.velocity = Vector3.zero;
 
-            
             Vector3 lookDirection = (player.position - transform.position).normalized;
             lookDirection.y = 0;
             transform.rotation = Quaternion.LookRotation(lookDirection);
 
-            
             if (animator != null) animator.SetTrigger("Attack");
 
             TriggerGameOver();
@@ -140,13 +155,18 @@ public class EnemyAI : MonoBehaviour
         isDead = true;
         Debug.LogWarning("¡EL ENEMIGO TE HA ATRAPADO! GAME OVER.");
 
+        
         FirstPersonHorror playerScript = player.GetComponent<FirstPersonHorror>();
         if (playerScript != null)
         {
             playerScript.TriggerDeath();
         }
-    }
 
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.TriggerGameOver();
+        }
+    }
 
     private void StartFleeing()
     {

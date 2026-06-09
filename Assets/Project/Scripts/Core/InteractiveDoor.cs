@@ -49,5 +49,15 @@ public class InteractiveDoor : MonoBehaviour
     public void ToggleDoor()
     {
         isOpen = !isOpen;
+
+
+        if (TelemetryManager.Instance != null && isOpen)
+        {            
+            TelemetryManager.Instance.RegisterDoorOpened();
+        }
+        else
+        {
+            Debug.LogWarning("La puerta se abrió, pero no hay TelemetryManager en la escena para registrarlo.");
+        }
     }
 }
