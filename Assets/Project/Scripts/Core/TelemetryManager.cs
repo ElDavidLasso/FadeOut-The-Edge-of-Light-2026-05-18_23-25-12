@@ -6,7 +6,7 @@ using System.Collections.Generic;
 [Serializable]
 public class TelemetryEvent
 {
-    public string timestamp; 
+    public string timestamp;
     public string category;
     public string detail;
 }
@@ -15,17 +15,23 @@ public class TelemetryEvent
 public class GameMetrics
 {
     public string sessionDate;
-    public string finalOutcome; 
-    public string totalTimePlayed; 
+    public string finalOutcome;
+    public string totalTimePlayed;
 
     [Header("Análisis Espacial (BSP)")]
     public int totalDoorsOpened;
+    public float totalDistanceTraveledMeters; 
+
+    [Header("Análisis de UX y Tensión")]
+    public int freezeMomentsCount; 
+    public int franticTurnsCount; 
+    public float finalFlashlightBattery; 
 
     [Header("Análisis de IA (Director)")]
     public int totalEnemyTeleports;
     public int teleportsNearPlayer;
     public int timesChased;
-    public string totalTimeInChase; 
+    public string totalTimeInChase;
 
     [Header("Línea de Tiempo (Timeline)")]
     public List<TelemetryEvent> timeline = new List<TelemetryEvent>();
@@ -38,10 +44,9 @@ public class TelemetryManager : MonoBehaviour
     private GameMetrics metrics = new GameMetrics();
     private float startTime;
 
-    
     private bool isCurrentlyChased = false;
     private float chaseStartTime;
-    private float rawTotalTimeInChase = 0f; 
+    private float rawTotalTimeInChase = 0f;
 
     private void Awake()
     {
@@ -57,34 +62,42 @@ public class TelemetryManager : MonoBehaviour
         else { Destroy(gameObject); }
     }
 
-    
     private string FormatTime(float timeInSeconds)
     {
         TimeSpan timeSpan = TimeSpan.FromSeconds(timeInSeconds);
-        
         return string.Format("{0:D2}:{1:D2}:{2:D2}", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
     }
 
-    
     public void LogEvent(string category, string detail)
     {
         float currentTime = Time.time - startTime;
         metrics.timeline.Add(new TelemetryEvent
         {
-            timestamp = FormatTime(currentTime), 
+            timestamp = FormatTime(currentTime),
             category = category,
             detail = detail
         });
     }
 
-    
+    public void UpdatePhysicalMetrics(float distance, int freezes, int franticTurns)
+    {
+        metrics.totalDistanceTraveledMeters = (float)Math.Round(distance, 2);
+        metrics.freezeMomentsCount = freezes;
+        metrics.franticTurnsCount = franticTurns;
+    }
+
+    public void UpdateBatteryMetric(float remainingBattery)
+    {
+        metrics.finalFlashlightBattery = (float)Math.Round(remainingBattery, 2);
+    }
+
+
     public void RegisterDoorOpened()
     {
         metrics.totalDoorsOpened++;
         LogEvent("Exploración", $"Puerta abierta. Total: {metrics.totalDoorsOpened}");
     }
 
-    
     public void RegisterEnemyTeleport(bool nearPlayer)
     {
         metrics.totalEnemyTeleports++;
@@ -94,9 +107,7 @@ public class TelemetryManager : MonoBehaviour
             LogEvent("IA_Director", "Teletransporte de Tensión (Cerca del jugador)");
         }
         else
-        {
             LogEvent("IA_Director", "Teletransporte de Reposicionamiento (Lejos)");
-        }
     }
 
     public void SetChaseState(bool isChasing)
@@ -114,22 +125,17 @@ public class TelemetryManager : MonoBehaviour
         else
         {
             float chaseDuration = Time.time - chaseStartTime;
-            rawTotalTimeInChase += chaseDuration; 
-
-            
+            rawTotalTimeInChase += chaseDuration;
             metrics.totalTimeInChase = FormatTime(rawTotalTimeInChase);
             LogEvent("Combate", $"Fin de persecución. Duración: {FormatTime(chaseDuration)}");
         }
     }
 
-    
     public void ExportMetrics(string outcome)
     {
         if (isCurrentlyChased) SetChaseState(false);
 
         metrics.finalOutcome = outcome;
-
-        
         metrics.totalTimePlayed = FormatTime(Time.time - startTime);
 
         LogEvent("Sistema", $"Fin de la partida: {outcome}");
@@ -139,6 +145,6 @@ public class TelemetryManager : MonoBehaviour
         string path = Application.persistentDataPath + filename;
 
         File.WriteAllText(path, json);
-        Debug.Log($"<color=cyan>Métricas (00:00:00) guardadas en: {path}</color>");
+        Debug.Log($"<color=cyan>Métricas (Tesis) guardadas en: {path}</color>");
     }
 }
