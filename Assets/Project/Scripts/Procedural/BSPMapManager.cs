@@ -16,6 +16,8 @@ public class BSPMapManager : MonoBehaviour
     [SerializeField] private GameObject player;
     [SerializeField] private NavMeshSurface navMeshSurface;
 
+    [SerializeField] private HUDMapVisualizer hudMapVisualizer;
+
     [Header("Sistema del Director (IA)")]
     [SerializeField] private GameObject enemy;
 
@@ -61,6 +63,14 @@ public class BSPMapManager : MonoBehaviour
             Debug.LogWarning("Falta asignar el NavMeshSurface en el BSPMapManager.");
         }
 
+        if (hudMapVisualizer != null)
+        {
+           
+            hudMapVisualizer.Initialize(mapWidth, mapHeight);
+
+            
+            hudMapVisualizer.DrawEntireMap(rootNode);
+        }
 
         SpawnEntities(rootNode);
 

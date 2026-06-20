@@ -38,6 +38,10 @@ public class FlashlightDecay : MonoBehaviour
             Debug.LogWarning("La linterna debería ser un SpotLight.");
         }
         flashlight.intensity = maxIntensity;
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateFlashlightIcon(isFlashlightOn);
+        }
     }
 
     private void Update()
@@ -49,6 +53,7 @@ public class FlashlightDecay : MonoBehaviour
             timeActive += Time.deltaTime;
             CalculateMathematicalFalloff();
         }
+        if (UIManager.Instance != null) UIManager.Instance.UpdateBatteryUI(BatteryLevel);
     }
 
     private void ToggleFlashlight()
@@ -57,6 +62,12 @@ public class FlashlightDecay : MonoBehaviour
         {
             isFlashlightOn = !isFlashlightOn;
             flashlight.enabled = isFlashlightOn;
+
+
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.UpdateFlashlightIcon(isFlashlightOn);
+            }
         }
     }
 

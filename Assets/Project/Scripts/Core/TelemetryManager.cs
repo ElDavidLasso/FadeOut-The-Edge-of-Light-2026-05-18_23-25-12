@@ -41,6 +41,7 @@ public class TelemetryManager : MonoBehaviour
 {
     public static TelemetryManager Instance { get; private set; }
 
+    public GameMetrics CurrentMetrics => metrics;
     private GameMetrics metrics = new GameMetrics();
     private float startTime;
 
@@ -50,16 +51,15 @@ public class TelemetryManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null)
-        {
+
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            
             startTime = Time.time;
             metrics.sessionDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             metrics.totalTimeInChase = "00:00:00";
             LogEvent("Sistema", "Generación BSP completada. Partida iniciada.");
-        }
-        else { Destroy(gameObject); }
+        
+        
     }
 
     private string FormatTime(float timeInSeconds)
